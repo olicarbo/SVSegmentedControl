@@ -73,6 +73,8 @@
         self.userInteractionEnabled = YES;
         self.animateToInitialSelection = NO;
         
+        self.trackThumbMove = NO;
+        self.canToggle = NO;
         self.mustSlideToChange = NO;
         self.minimumOverlapToChange = 0.66;
         
@@ -258,16 +260,19 @@
 - (BOOL)beginTrackingWithTouch:(UITouch *)touch withEvent:(UIEvent *)event {
     [super beginTrackingWithTouch:touch withEvent:event];
     
-    CGPoint cPos = [touch locationInView:self.thumb];
-	self.activated = NO;
-	
-	self.snapToIndex = MIN(floor(self.thumb.center.x/self.segmentWidth), self.sectionTitles.count-1);
-	
-	if([self.thumb pointInside:cPos withEvent:event]) {
-		self.trackingThumb = YES;
-        [self.thumb deactivate];
-		self.dragOffset = (self.thumb.frame.size.width/2)-cPos.x;
-	}
+    if (self.trackThumbMove)
+    {
+        CGPoint cPos = [touch locationInView:self.thumb];
+        self.activated = NO;
+        
+        self.snapToIndex = MIN(floor(self.thumb.center.x/self.segmentWidth), self.sectionTitles.count-1);
+        
+        if([self.thumb pointInside:cPos withEvent:event]) {
+            self.trackingThumb = YES;
+            [self.thumb deactivate];
+            self.dragOffset = (self.thumb.frame.size.width/2)-cPos.x;
+        }
+    }
     
     return YES;
 }
@@ -316,7 +321,7 @@
 	CGFloat pMaxX = CGRectGetMaxX(self.bounds);
 	CGFloat pMinX = CGRectGetMinX(self.bounds); // 5 is for thumb shadow
 	
-    if(!self.mustSlideToChange && !self.moved && self.trackingThumb && [self.sectionTitles count] == 2)
+    if(self.canToggle && !self.mustSlideToChange && !self.moved && self.trackingThumb && [self.sectionTitles count] == 2)
         [self toggle];
     else if(!self.activated && posX > pMinX && posX < pMaxX) {
         int potentialSnapToIndex = MIN(floor(cPos.x/self.segmentWidth), self.sectionTitles.count-1);
@@ -378,7 +383,7 @@
 		self.changeHandler(self.snapToIndex);
     
 	if(animated)
-		[self setSelectedSegmentIndex:index animated:YES];
+		[self setSelectedSegmentIndex:index animated:NO];
 	else
 		self.thumb.frame = [[self.thumbRects objectAtIndex:index] CGRectValue];
 }
@@ -541,7 +546,7 @@
         // bottom gloss
         CGRect insetRect = CGRectMake(0, 0, rect.size.width, rect.size.height-1);
         CGContextSetFillColorWithColor(context, [UIColor colorWithWhite:1 alpha:0.1].CGColor);
-        
+
         UIBezierPath *bottomGlossPath = [UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:self.cornerRadius];
         [bottomGlossPath appendPath:[UIBezierPath bezierPathWithRoundedRect:insetRect cornerRadius:self.cornerRadius]];
         bottomGlossPath.usesEvenOddFillRule = YES;
@@ -575,7 +580,7 @@
         CGContextDrawLinearGradient(context, gradient, CGPointMake(0,0), CGPointMake(0,CGRectGetHeight(rect)-1), 0);
         CGGradientRelease(gradient);
         CGColorSpaceRelease(colorSpace);
-        
+                
         // inner shadow
         NSArray *paths = [NSArray arrayWithObject:[UIBezierPath bezierPathWithRoundedRect:insetRect cornerRadius:self.cornerRadius]];
         UIImage *mask = [self maskWithPaths:paths bounds:CGRectInset(insetRect, -10, -10)];
@@ -588,7 +593,7 @@
     
 	CGContextSetShadowWithColor(context, self.textShadowOffset, 0, self.textShadowColor.CGColor);
 	[self.textColor set];
-    
+		
 	int i = 0;
 	
 	for(NSString *titleString in self.sectionTitles) {
@@ -596,7 +601,7 @@
         CGFloat titleWidth = titleSize.width;
         CGFloat posY = round((CGRectGetHeight(rect)-self.font.ascender-5)/2)+self.titleEdgeInsets.top-self.titleEdgeInsets.bottom;
         //NSLog(@"%@ %f, height=%f, descender=%f, ascender=%f, lineHeight=%f", self.font.familyName, self.font.pointSize, titleSize.height, self.font.descender, self.font.ascender, self.font.lineHeight);
-        
+
         CGFloat imageWidth = 0;
         UIImage *image = nil;
         
